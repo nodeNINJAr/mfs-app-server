@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require("express");
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-const connectDB = require('./config/db');
 const PORT = process.env.PORT || 5000;
+const connectDB = require('./config/db');
 
 
 
@@ -21,7 +21,11 @@ app.use(cookieParser());
 // Connect to MongoDB
 connectDB();
 
-
+// Routes
+// app.use('/api/auth', require('./routes/authRoutes'));
+// app.use('/api/user', require('./routes/userRoutes'));
+// app.use('/api/agent', require('./routes/agentRoutes'));
+// app.use('/api/admin', require('./routes/adminRoutes'));
 
 
 
