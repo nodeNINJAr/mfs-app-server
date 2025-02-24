@@ -17,11 +17,5 @@ const userSchema = new mongoose.Schema({
   transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
 }, { timestamps: true });
 
-// Hash the PIN before saving
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('pin')) return next();
-  this.pin = await bcrypt.hash(this.pin, 10);
-  next();
-});
 
 module.exports = mongoose.model('User', userSchema);

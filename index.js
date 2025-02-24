@@ -22,10 +22,10 @@ app.use(cookieParser());
 connectDB();
 
 // Routes
-// app.use('/api/auth', require('./routes/authRoutes'));
-// app.use('/api/user', require('./routes/userRoutes'));
-// app.use('/api/agent', require('./routes/agentRoutes'));
-// app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/auth', require('./routes/authRoutes'));
+// app.use('/user', require('./routes/userRoutes'));
+// app.use('/agent', require('./routes/agentRoutes'));
+// app.use('/admin', require('./routes/adminRoutes'));
 
 
 
