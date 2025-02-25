@@ -109,6 +109,59 @@ try {
 };
 
 
+// ** Get all agent approval requests
+const getAgentApprovalRequests = async (req, res) => {
+  try {
+    // Find all agents with isApproved = false
+    const agents = await User.find({ accountType: 'agent', isApproved: "pending",isApproved: "rejected", }).select('-pin'); 
+
+    res.status(200).json({ message: 'Agent approval requests retrieved successfully', agents });
+  } catch (err) {
+    console.error('Error retrieving agent approval requests:', err);
+    res.status(500).json({ message: 'Server error while retrieving agent approval requests' });
+  }
+};
+
+// ** Approve an agent
+const approveAgent = async (req, res) => {
+  const { agentId } = req.params;
+
+  try {
+    const agent = await User.findById(agentId);
+    if (!agent || agent.accountType !== 'agent') {
+      return res.status(404).json({ message: 'Agent not found' });
+    }
+
+    agent.isApproved = "approved";
+    await agent.save();
+
+    res.status(200).json({ message: 'Agent approved successfully', agent });
+  } catch (err) {
+    console.error('Error approving agent:', err);
+    res.status(500).json({ message: 'Server error while approving agent' });
+  }
+};
+
+// Reject an agent
+const rejectAgent = async (req, res) => {
+  const { agentId } = req.params;
+  //   
+  try {
+    const agent = await User.findById(agentId);
+    if (!agent || agent.accountType !== 'agent') {
+      return res.status(404).json({ message: 'Agent not found' });
+    }
+
+    // mark them as rejected
+    agent.isApproved = 'rejected';
+    await agent.save();
+
+    res.status(200).json({ message: 'Agent rejected successfully', agent });
+  } catch (err) {
+    console.error('Error rejecting agent:', err);
+    res.status(500).json({ message: 'Server error while rejecting agent' });
+  }
+};
 
 module.exports = {
   getAllUsers,
@@ -116,5 +169,9 @@ module.exports = {
   blockUser,
   unblockUser,
   getUserTransactions,
-  searchUsers
+  searchUsers,
+  getAgentApprovalRequests,
+  approveAgent,
+  rejectAgent
+
 };

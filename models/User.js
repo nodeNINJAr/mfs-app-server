@@ -11,7 +11,7 @@ const userSchema = new mongoose.Schema({
     return this.accountType === 'user' ? 40 : 100000;
   }},
   isBlocked: { type: Boolean, default: false },
-  isApproved: { type: Boolean, default: false }, // For agents
+  isApproved: { type: String, default: 'pending' }, // For agents
   income: { type: Number, default: 0 }, // For agents
   transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
 }, { timestamps: true });
