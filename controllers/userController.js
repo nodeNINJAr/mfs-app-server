@@ -2,6 +2,10 @@ const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const generateTransactionId = require('../utils/generateTransactionId');
+const CashRequest = require('../models/CashRequest');
+const WithdrawRequest = require('../models/WithdrawRequest');
+
+
 
 // ** send money
 const sendMoney = async (req, res) => {
@@ -194,7 +198,6 @@ const getBalance = async (req, res) => {
   }
 };
 
-
 // **CashIn By Agent
 const cashIn = async (req, res) => {
   const { userMobileNumber, amount, pin } = req.body;
@@ -270,6 +273,49 @@ const cashIn = async (req, res) => {
   }
 };
 
+// ** Request cash recharge
+const requestCashRecharge = async (req, res) => {
+  const { amount } = req.body;
+  const agentId = req.user.id;
+
+  try {
+    // Create a new cash request
+    const cashRequest = new CashRequest({
+      agentId,
+      amount,
+      status: 'pending',
+    });
+
+    await cashRequest.save();
+
+    res.status(201).json({ message: 'Cash request submitted successfully', cashRequest });
+  } catch (err) {
+    console.error('Error submitting cash request:', err);
+    res.status(500).json({ message: 'Server error while submitting cash request' });
+  }
+};
+
+// ** Request withdrawal
+const requestWithdraw = async (req, res) => {
+  const { amount } = req.body;
+  const agentId = req.user.id; 
+
+  try {
+    // Create a new withdraw request
+    const withdrawRequest = new WithdrawRequest({
+      agentId,
+      amount,
+      status: 'pending',
+    });
+
+    await withdrawRequest.save();
+
+    res.status(201).json({ message: 'Withdraw request submitted successfully', withdrawRequest });
+  } catch (err) {
+    console.error('Error submitting withdraw request:', err);
+    res.status(500).json({ message: 'Server error while submitting withdraw request' });
+  }
+};
 
 
-module.exports = { sendMoney, cashOut, cashIn, getTransactions, getBalance};
+module.exports = { sendMoney, cashOut, cashIn, getTransactions, getBalance , requestCashRecharge, requestWithdraw};

@@ -142,7 +142,7 @@ const approveAgent = async (req, res) => {
   }
 };
 
-// Reject an agent
+// ** Reject an agent
 const rejectAgent = async (req, res) => {
   const { agentId } = req.params;
   //   
