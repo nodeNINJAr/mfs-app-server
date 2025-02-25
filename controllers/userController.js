@@ -126,6 +126,52 @@ const cashOut = async (req, res) => {
   }
 };
 
+// ** GetTransactions
+const getTransactions = async (req, res) => {
+  const userId = req.user.id; 
+  const { limit = 100, skip = 0 } = req.query;
+
+  try {
+    // Find all transactions where the user is either the sender or receiver
+    const transactions = await Transaction.find({
+      $or: [
+        { senderId: userId },
+        { receiverId: userId },
+      ],
+    })
+      .sort({ createdAt: -1 }) 
+      .limit(parseInt(limit)) 
+      .skip(parseInt(skip)) // 
+      .populate('senderId', 'name mobileNumber') 
+      .populate('receiverId', 'name mobileNumber'); 
+
+    // Formating
+    const formattedTransactions = transactions.map((transaction) => ({
+      transactionId: transaction.transactionId,
+      type: transaction.type,
+      amount: transaction.amount,
+      fee: transaction.fee,
+      sender: {
+        name: transaction.senderId.name,
+        mobileNumber: transaction.senderId.mobileNumber,
+      },
+      receiver: {
+        name: transaction.receiverId.name,
+        mobileNumber: transaction.receiverId.mobileNumber,
+      },
+      timestamp: transaction.createdAt,
+    }));
+
+    res.status(200).json({
+      message: 'Transactions retrieved successfully',
+      transactions: formattedTransactions,
+    });
+  } catch (err) {
+    console.error('Error retrieving transactions:', err);
+    res.status(500).json({ message: 'Server error while retrieving transactions' });
+  }
+};
+
 
 // **CashIn By Agent
 const cashIn = async (req, res) => {
@@ -203,4 +249,5 @@ const cashIn = async (req, res) => {
 };
 
 
-module.exports = { sendMoney, cashOut , cashIn };
+
+module.exports = { sendMoney, cashOut, cashIn, getTransactions };
