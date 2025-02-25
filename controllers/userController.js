@@ -45,7 +45,6 @@ const sendMoney = async (req, res) => {
   res.status(200).json({ message: 'Transaction successful', transaction });
 };
 
-
 // ** CashOut
 const cashOut = async (req, res) => {
   const { userMobileNumber, agentMobileNumber, amount, pin } = req.body;
@@ -172,6 +171,29 @@ const getTransactions = async (req, res) => {
   }
 };
 
+// ** Get balanced
+const getBalance = async (req, res) => {
+  const userId = req.user.id;
+  // 
+  try {
+    // Find the user by ID
+    const user = await User.findById(userId).select('balance');
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Return the balance
+    res.status(200).json({
+      message: 'Balance retrieved successfully',
+      balance: user.balance,
+    });
+  } catch (err) {
+    console.error('Error retrieving balance:', err);
+    res.status(500).json({ message: 'Server error while retrieving balance' });
+  }
+};
+
 
 // **CashIn By Agent
 const cashIn = async (req, res) => {
@@ -250,4 +272,4 @@ const cashIn = async (req, res) => {
 
 
 
-module.exports = { sendMoney, cashOut, cashIn, getTransactions };
+module.exports = { sendMoney, cashOut, cashIn, getTransactions, getBalance};

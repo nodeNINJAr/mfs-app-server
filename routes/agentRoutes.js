@@ -7,7 +7,7 @@ router.use(verifyToken);
 
 // 
 router.post('/cashIn', cashIn);
-// router.get('/balance', getBalance);
+router.get('/balance', getBalance);
 router.get('/transactions', getTransactions);
 
 module.exports = router;
