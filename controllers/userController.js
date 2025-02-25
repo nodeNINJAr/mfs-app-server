@@ -1,9 +1,9 @@
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const generateTransactionId = require('../utils/generateTransactionId');
 
-
+// ** send money
 const sendMoney = async (req, res) => {
   const { receiverMobileNumber, amount, pin } = req.body;
   const validInfo = req.user;
@@ -45,4 +45,162 @@ const sendMoney = async (req, res) => {
   res.status(200).json({ message: 'Transaction successful', transaction });
 };
 
-module.exports = { sendMoney };
+
+// ** CashOut
+const cashOut = async (req, res) => {
+  const { userMobileNumber, agentMobileNumber, amount, pin } = req.body;
+
+  try {
+    // ** Validate input data
+    if (!userMobileNumber || !agentMobileNumber || !amount || !pin) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // ** Find the user and agent
+    const user = await User.findOne({ mobileNumber: userMobileNumber });
+    const agent = await User.findOne({ mobileNumber: agentMobileNumber,accountType:'agent' });
+    // **
+    if (!user || !agent) {
+      return res.status(404).json({ message: 'User or agent not found' });
+    }
+
+    // Verify the user's PIN
+    const isPinValid = await bcrypt.compare(pin, user.pin);
+    if (!isPinValid) {
+      return res.status(401).json({ message: 'Invalid PIN' });
+    }
+
+    // Validate the amount
+    if (amount < 50) {
+      return res.status(400).json({ message: 'Minimum amount is 50 Taka' });
+    }
+
+    // Calculate the cash-out fee (1.5% of the amount)
+    const fee = (amount * 1.5) / 100;
+    const totalAmount = amount + fee;
+
+    // Check the user's balance
+    if (user.balance < totalAmount) {
+      return res.status(400).json({ message: 'Insufficient balance' });
+    }
+
+    // Deduct the amount and fee from the user's balance
+    user.balance -= totalAmount;
+    await user.save();
+
+    // Add the amount to the agent's balance
+    agent.balance += amount;
+    await agent.save();
+
+    // Generate a unique transaction ID
+    const transactionId = generateTransactionId();
+
+    // Create a new transaction
+    const transaction = new Transaction({
+      transactionId,
+      senderId: user._id,
+      receiverId: agent._id,
+      amount,
+      fee,
+      type: 'cashOut',
+    });
+
+    await transaction.save();
+
+    // Return success response
+    res.status(200).json({
+      message: 'Cash-out successful',
+      transaction: {
+        transactionId: transaction.transactionId,
+        userMobileNumber: user.mobileNumber,
+        agentMobileNumber: agent.mobileNumber,
+        amount: transaction.amount,
+        fee: transaction.fee,
+        type: transaction.type,
+        timestamp: transaction.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error('Error during cash-out:', err);
+    res.status(500).json({ message: 'Server error during cash-out' });
+  }
+};
+
+
+// **CashIn By Agent
+const cashIn = async (req, res) => {
+  const { userMobileNumber, amount, pin } = req.body;
+  const verified = req.user;
+  
+  // 
+  try {
+    // Validate input data
+    if (!userMobileNumber || !amount || !pin) {
+      return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    // Find the user and agent
+    const user = await User.findOne({ mobileNumber: userMobileNumber });
+    const agent = await User.findOne({ _id: verified?.id , accountType:verified?.accountType});
+
+    if (!user || !agent) {
+      return res.status(404).json({ message: 'User or agent not found' });
+    }
+
+    // Verify the agent's PIN
+    const isPinValid = await bcrypt.compare(pin, agent.pin);
+    if (!isPinValid) {
+      return res.status(401).json({ message: 'Invalid PIN' });
+    }
+
+    // Validate the amount
+    if (amount < 50) {
+      return res.status(400).json({ message: 'Minimum amount is 50 Taka' });
+    }
+
+    // Check the agent's balance
+    if (agent.balance < amount) {
+      return res.status(400).json({ message: 'Agent has insufficient balance' });
+    }
+
+    // Deduct the amount from the agent's balance
+    agent.balance -= amount;
+    await agent.save();
+
+    // Add the amount to the user's balance
+    user.balance += amount;
+    await user.save();
+
+    // Create a new transaction
+    const transaction = new Transaction({
+      transactionId:generateTransactionId(),
+      senderId: agent._id,
+      receiverId: user._id,
+      amount,
+      fee: 0, 
+      type: 'cashIn',
+    });
+
+    await transaction.save();
+
+    // **
+    res.status(200).json({
+      message: 'Cash-in successful',
+      transaction: {
+        transactionId: transaction.transactionId,
+        userMobileNumber: user.mobileNumber,
+        agentMobileNumber: agent.mobileNumber,
+        amount: transaction.amount,
+        fee: transaction.fee,
+        type: transaction.type,
+        timestamp: transaction.createdAt,
+      },
+    });
+  } catch (err) {
+    console.error('Error during cash-in:', err);
+    res.status(500).json({ message: 'Server error during cash-in' });
+  }
+};
+
+
+module.exports = { sendMoney, cashOut , cashIn };
