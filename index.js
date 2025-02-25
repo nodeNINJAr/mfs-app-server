@@ -23,7 +23,7 @@ connectDB();
 
 // Routes
 app.use('/auth', require('./routes/authRoutes'));
-// app.use('/user', require('./routes/userRoutes'));
+app.use('/user', require('./routes/userRoutes'));
 // app.use('/agent', require('./routes/agentRoutes'));
 // app.use('/admin', require('./routes/adminRoutes'));
 
