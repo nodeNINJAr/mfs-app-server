@@ -142,6 +142,51 @@ const rejectAgent = async (req, res) => {
   }
 };
 
+//* */
+const calculateSystemMoney = async (req, res) => {
+  try {
+    // Total user balances
+    const totalUserBalances = await User.aggregate([
+      { $match: { accountType: "user" } },
+      { $group: { _id: null, total: { $sum: "$balance" } } },
+    ]);
+  
+    // Total agent balances
+    const totalAgentBalances = await User.aggregate([
+      { $match: { accountType: "agent" } },
+      { $group: { _id: null, total: { $sum: "$balance" } } },
+    ]);
+
+    // Total admin income (from transaction fees)
+    const totalAdminIncome = await Transaction.aggregate([
+      { $group: { _id: null, total: { $sum: "$fee" } } },
+    ]);
+
+    // Total agent income (from cash-out transactions)
+    const totalAgentIncome = await User.aggregate([
+      { $match: { accountType: "agent" } },
+      { $group: { _id: null, total: { $sum: "$income" } } },
+    ]);
+
+    // Calculate system money
+    const systemMoney =
+      (totalUserBalances[0]?.total || 0) +
+      (totalAgentBalances[0]?.total || 0) +
+      (totalAdminIncome[0]?.total || 0) +
+      (totalAgentIncome[0]?.total || 0);
+      console.log(systemMoney);
+     res.status(200).json({systemMoney:systemMoney/100})
+  } catch (error) {
+    console.error("Error calculating system money:", error);
+    throw error;
+  }
+};
+
+
+
+
+
+
 
 // ** Get all cash requests
 const getCashRequests = async (req, res) => {
@@ -231,5 +276,6 @@ module.exports = {
   approveCashRequest,
   getWithdrawRequests,
   approveWithdrawRequest,
+  calculateSystemMoney
 
 };

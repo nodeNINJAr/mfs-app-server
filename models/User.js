@@ -6,7 +6,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   pin: { type: String, required: true },
   nid: { type: String, unique: true, required: true },
-  accountType: { type: String, enum: ['user', 'agent'], required: true },
+  accountType: { type: String, enum: ['user', 'agent',"admin"], required: true },
   balance: { type: Number, default: function () {
     return this.accountType === 'user' ? 40 : 100000;
   }},

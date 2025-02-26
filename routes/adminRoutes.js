@@ -12,6 +12,7 @@ const {
   approveCashRequest,
   getWithdrawRequests,
   approveWithdrawRequest,
+  calculateSystemMoney
 } = require('../controllers/adminController');
 const verifyToken = require('../middleware/verifyToken');
 
@@ -29,6 +30,8 @@ router.get('/users/:userId/transactions', getUserTransactions); // Get user tran
 router.get('/agents/approval-requests', getAgentApprovalRequests); // Get all agent approval requests
 router.patch('/agents/:agentId/approve', approveAgent); // Approve an agent
 router.patch('/agents/:agentId/reject', rejectAgent); // Reject an agent
+// ** System money
+router.get('/system-money', calculateSystemMoney)
 
 // ** Admin routes for cash and withdraw requests
 router.get('/cash-requests', getCashRequests); // Get all cash requests
