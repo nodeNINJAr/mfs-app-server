@@ -4,9 +4,7 @@ const {
   getAllUsers,
   getUserDetails,
   blockUser,
-  unblockUser,
   getUserTransactions,
-  searchUsers,
   getAgentApprovalRequests,
   approveAgent,
   rejectAgent,
@@ -29,8 +27,8 @@ router.get('/users/:userId/transactions', getUserTransactions); // Get user tran
 
 // ** Admin approval routes for agent req
 router.get('/agents/approval-requests', getAgentApprovalRequests); // Get all agent approval requests
-router.post('/agents/:agentId/approve', approveAgent); // Approve an agent
-router.post('/agents/:agentId/reject', rejectAgent); // Reject an agent
+router.patch('/agents/:agentId/approve', approveAgent); // Approve an agent
+router.patch('/agents/:agentId/reject', rejectAgent); // Reject an agent
 
 // ** Admin routes for cash and withdraw requests
 router.get('/cash-requests', getCashRequests); // Get all cash requests

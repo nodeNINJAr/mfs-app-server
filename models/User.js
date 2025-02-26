@@ -11,8 +11,15 @@ const userSchema = new mongoose.Schema({
     return this.accountType === 'user' ? 40 : 100000;
   }},
   isBlocked: { type: Boolean, default: false },
-  isApproved: { type: String, default: 'pending' }, // For agents
+  isApproved: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: function () {
+      return this.accountType === "agent" ? "pending" : null; 
+    },
+  },
   income: { type: Number, default: 0 }, // For agents
+  sessionId: { type: String, default: null }, // Track active session
 }, { timestamps: true });
 
 

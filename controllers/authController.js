@@ -1,3 +1,4 @@
+const { v4: uuidv4 } = require("uuid");
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
@@ -33,7 +34,6 @@ const registerUser = async (req, res) => {
   
       // Set default values based on accountType in paisa
       const balance = accountType === 'user' ? parseInt(4000) : parseInt(10000000) ;
-      const isApproved = accountType === 'user' ? true : false; // Agents need approval
   
       // Create a new user
       const newUser = new User({
@@ -45,7 +45,6 @@ const registerUser = async (req, res) => {
         accountType,
         balance,
         isBlocked: false, // Default value
-        isApproved,       // Value for agents
         income: 0,        // Default value for agents
       });
   
@@ -53,17 +52,17 @@ const registerUser = async (req, res) => {
       await newUser.save();
   
       // Return success response
-      const userResponse = {
-        _id: newUser._id,
-        name: newUser.name,
-        mobileNumber: newUser.mobileNumber,
-        email: newUser.email,
-        accountType: newUser.accountType,
-        balance: newUser.balance,
-        isApproved: newUser.isApproved,
-      };
+      // const userResponse = {
+      //   _id: newUser._id,
+      //   name: newUser.name,
+      //   mobileNumber: newUser.mobileNumber,
+      //   email: newUser.email,
+      //   accountType: newUser.accountType,
+      //   balance: newUser.balance,
+      //   isApproved: newUser.isApproved,
+      // };
   
-      res.status(201).json({ message: 'User registered successfully', user: userResponse });
+      res.status(201).json({ message: 'User registered successfully'});
     } catch (err) {
       console.error('Error during registration:', err);
       res.status(500).json({ message: 'Server error during registration' });
@@ -93,17 +92,29 @@ const registerUser = async (req, res) => {
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-      //  
-        const isPinValid = await bcrypt.compare(pin.toString(), user.pin);
-        console.log('PIN comparison result:', isPinValid);
 
+       // Check if the user is already logged in (only for users and agents)
+        if (user.sessionId && (user.accountType === "user" || user.accountType === "agent")) {
+          return res.status(400).json({ message: "User is already logged in from another device" });
+        }
+      // pin validate 
+        const isPinValid = await bcrypt.compare(pin.toString(), user.pin);
+      //  
         if (!isPinValid) {
           return res.status(401).json({ message: 'Invalid PIN' });
         }
 
+        
+        // Generate a new session ID
+         const sessionId = uuidv4();
+          // Update the user's session ID
+          user.sessionId = sessionId;
+          await user.save();
+
+
         // Generate token and continue with successful login...
         const token = jwt.sign(
-          { id: user._id, accountType: user.accountType },
+          { id: user._id, sessionId, accountType: user.accountType },
           process.env.JWT_SECRET,
           { expiresIn: '2h' }
         );
@@ -119,25 +130,28 @@ const registerUser = async (req, res) => {
         // 
         const userResponse = {
           _id: user._id,
-          name: user.name,
-          mobileNumber: user.mobileNumber,
-          email: user.email,
+           name: user.name,
           accountType: user.accountType,
           balance: user.balance,
           isApproved: user.isApproved,
         };
 
-        res.status(200).json({ message: 'Login successful',token, user: userResponse });
+        res.status(200).json({ message: 'Login successful',token,user:userResponse });
    
     } catch (err) {
       console.error('Error during login:', err);
-      res.status(500).json({ message: 'Server error during login' });
+      res.status(500).json({ message: 'Server error during login'});
     }
 };
 
 // ** LogOut
-const logout = (req, res) => {
+const logout = async(req, res) => {
+const {userId} = req?.body;
     try {
+     // Clear the session ID
+     const user = await User.findOne({_id:userId});
+      user.sessionId = null;
+      await user.save();
       // Clear the token cookie
       res.clearCookie('token', {
         httpOnly: true,

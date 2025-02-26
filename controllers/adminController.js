@@ -75,8 +75,6 @@ const getUserTransactions = async (req, res) => {
         ],
       })
         .sort({ createdAt: -1 })
-        .populate('senderId', 'name mobileNumber') 
-        .populate('receiverId', 'name mobileNumber');
   
       res.status(200).json({
         message: 'User transactions retrieved successfully',
@@ -92,8 +90,8 @@ const getUserTransactions = async (req, res) => {
 // ** Get all agent approval requests
 const getAgentApprovalRequests = async (req, res) => {
   try {
-    // Find all agents with isApproved = false
-    const agents = await User.find({ accountType: 'agent', isApproved: "pending",isApproved: "rejected", }).select('-pin'); 
+    // Find all agents with isApproved = pending
+    const agents = await User.find( {$or:[{ accountType: 'agent', isApproved: "pending"}]}).select('-pin'); 
 
     res.status(200).json({ message: 'Agent approval requests retrieved successfully', agents });
   } catch (err) {
@@ -101,6 +99,7 @@ const getAgentApprovalRequests = async (req, res) => {
     res.status(500).json({ message: 'Server error while retrieving agent approval requests' });
   }
 };
+
 
 // ** Approve an agent
 const approveAgent = async (req, res) => {
