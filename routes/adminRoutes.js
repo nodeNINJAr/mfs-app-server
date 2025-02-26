@@ -23,8 +23,7 @@ router.use(verifyToken);
 // ** Admin routes
 router.get('/users', getAllUsers); // Get all users
 router.get('/user/:userId', getUserDetails); // Get user details
-router.post('/users/:userId/block', blockUser); // Block a user
-router.post('/users/:userId/unblock', unblockUser); // Unblock a user
+router.patch('/users/:userId/block', blockUser); // Block and unblock user
 router.get('/users/:userId/transactions', getUserTransactions); // Get user transactions
 
 

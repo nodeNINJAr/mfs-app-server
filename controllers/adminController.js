@@ -8,7 +8,7 @@ const WithdrawRequest = require('../models/WithdrawRequest');
 const getAllUsers = async (req, res) => {
   try {
     const { mobileNumber } = req.query;
-    
+
     // Build the query
     const query = {};
     if (mobileNumber) {
@@ -44,15 +44,16 @@ const getUserDetails = async (req, res) => {
 // ** Block a user
 const blockUser = async (req, res) => {
     const { userId } = req.params;
+    const {isBlocked} = req?.body;
     // 
     try {
       const user = await User.findById(userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
       }
-  
-      user.isBlocked = true;
-      await user.save();
+      
+        user.isBlocked = isBlocked === false? true:false;
+        await user.save();
   
       res.status(200).json({ message: 'User blocked successfully', user });
     } catch (err) {
@@ -61,25 +62,6 @@ const blockUser = async (req, res) => {
     }
   };
   
-// ** Unblock a user
-const unblockUser = async (req, res) => {
-const { userId } = req.params;
-// 
-try {
-    const user = await User.findById(userId);
-    if (!user) {
-    return res.status(404).json({ message: 'User not found' });
-    }
-
-    user.isBlocked = false;
-    await user.save();
-
-    res.status(200).json({ message: 'User unblocked successfully', user });
-} catch (err) {
-    console.error('Error unblocking user:', err);
-    res.status(500).json({ message: 'Server error while unblocking user' });
-}
-};
 
 // ** Get all transactions for a user
 const getUserTransactions = async (req, res) => {
@@ -242,9 +224,7 @@ module.exports = {
   getAllUsers,
   getUserDetails,
   blockUser,
-  unblockUser,
   getUserTransactions,
-  searchUsers,
   getAgentApprovalRequests,
   approveAgent,
   rejectAgent,
