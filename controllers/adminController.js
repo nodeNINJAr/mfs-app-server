@@ -1,15 +1,26 @@
 const Transaction = require('../models/Transaction');
 const User = require('../models/User');
+const CashRequest = require('../models/CashRequest');
+const WithdrawRequest = require('../models/WithdrawRequest');
 
 
-// ** Get all users
+// ** Get all users with optional search by mobile number
 const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select('-pin'); // Exclude PIN
-    res.status(200).json({ message: 'Users retrieved successfully', users });
+    const { mobileNumber } = req.query;
+    
+    // Build the query
+    const query = {};
+    if (mobileNumber) {
+      query.mobileNumber = { $regex: mobileNumber, $options: "i" };
+    }
+
+    // Fetch users based on the query
+    const users = await User.find(query).select("-pin"); // Exclude PIN
+    res.status(200).json({ message: "Users retrieved successfully", users });
   } catch (err) {
-    console.error('Error retrieving users:', err);
-    res.status(500).json({ message: 'Server error while retrieving users' });
+    console.error("Error retrieving users:", err);
+    res.status(500).json({ message: "Server error while retrieving users" });
   }
 };
 
@@ -95,19 +106,6 @@ const getUserTransactions = async (req, res) => {
     }
   };
   
-// ** Search users by phone number
-const searchUsers = async (req, res) => {
-const { phoneNumber} = req.query;
-// 
-try {
-    const users = await User.find({ mobileNumber: { $regex: phoneNumber, $options: 'i' } }).select('-pin');
-    res.status(200).json({ message: 'Users retrieved successfully', users });
-} catch (err) {
-    console.error('Error searching users:', err);
-    res.status(500).json({ message: 'Server error while searching users' });
-}
-};
-
 
 // ** Get all agent approval requests
 const getAgentApprovalRequests = async (req, res) => {
@@ -163,6 +161,83 @@ const rejectAgent = async (req, res) => {
   }
 };
 
+
+// ** Get all cash requests
+const getCashRequests = async (req, res) => {
+  try {
+    const cashRequests = await CashRequest.find({ status: 'pending' }).populate('agentId', 'name mobileNumber');
+    res.status(200).json({ message: 'Cash requests retrieved successfully', cashRequests });
+  } catch (err) {
+    console.error('Error retrieving cash requests:', err);
+    res.status(500).json({ message: 'Server error while retrieving cash requests' });
+  }
+};
+
+// ** Approve cash request
+const approveCashRequest = async (req, res) => {
+  const { requestId } = req.params;
+
+  try {
+    const cashRequest = await CashRequest.findById(requestId).populate('agentId');
+    if (!cashRequest) {
+      return res.status(404).json({ message: 'Cash request not found' });
+    }
+
+    // Add 100,000 to the agent's balance
+    cashRequest.agentId.balance += 100000;
+    await cashRequest.agentId.save();
+
+    // Update the cash request status
+    cashRequest.status = 'approved';
+    await cashRequest.save();
+
+    res.status(200).json({ message: 'Cash request approved successfully', cashRequest });
+  } catch (err) {
+    console.error('Error approving cash request:', err);
+    res.status(500).json({ message: 'Server error while approving cash request' });
+  }
+};
+
+// ** Get all withdraw requests
+const getWithdrawRequests = async (req, res) => {
+  try {
+    const withdrawRequests = await WithdrawRequest.find({ status: 'pending' }).populate('agentId', 'name mobileNumber');
+    res.status(200).json({ message: 'Withdraw requests retrieved successfully', withdrawRequests });
+  } catch (err) {
+    console.error('Error retrieving withdraw requests:', err);
+    res.status(500).json({ message: 'Server error while retrieving withdraw requests' });
+  }
+};
+
+// ** Approve withdraw request
+const approveWithdrawRequest = async (req, res) => {
+  const { requestId } = req.params;
+
+  try {
+    const withdrawRequest = await WithdrawRequest.findById(requestId).populate('agentId');
+    if (!withdrawRequest) {
+      return res.status(404).json({ message: 'Withdraw request not found' });
+    }
+
+    // Update the agent's income
+    withdrawRequest.agentId.income -= withdrawRequest.amount;
+    await withdrawRequest.agentId.save();
+
+    // Update the withdraw request status
+    withdrawRequest.status = 'approved';
+    await withdrawRequest.save();
+
+    res.status(200).json({ message: 'Withdraw request approved successfully', withdrawRequest });
+  } catch (err) {
+    console.error('Error approving withdraw request:', err);
+    res.status(500).json({ message: 'Server error while approving withdraw request' });
+  }
+};
+
+
+
+
+
 module.exports = {
   getAllUsers,
   getUserDetails,
@@ -172,6 +247,10 @@ module.exports = {
   searchUsers,
   getAgentApprovalRequests,
   approveAgent,
-  rejectAgent
+  rejectAgent,
+  getCashRequests,
+  approveCashRequest,
+  getWithdrawRequests,
+  approveWithdrawRequest,
 
 };

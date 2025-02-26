@@ -31,8 +31,8 @@ const registerUser = async (req, res) => {
       // Hash the PIN
       const hashedPin = await bcrypt.hash(pin.toString(), 10);
   
-      // Set default values based on accountType
-      const balance = accountType === 'user' ? 40 : 100000;
+      // Set default values based on accountType in paisa
+      const balance = accountType === 'user' ? parseInt(4000) : parseInt(10000000) ;
       const isApproved = accountType === 'user' ? true : false; // Agents need approval
   
       // Create a new user
@@ -74,19 +74,19 @@ const registerUser = async (req, res) => {
 
 // ** User Login
   const login = async (req, res) => {
-    const { mobileNumber, email, pin } = req.body;
+    const { userName, pin } = req.body;
     // 
     try {
       // Validate input data
-      if ((!mobileNumber && !email) || !pin) {
+      if (!userName || !pin) {
         return res.status(400).json({ message: 'Mobile number/email and PIN are required' });
       }
   
       // Find the user by mobileNumber or email
       const user = await User.findOne({
         $or: [
-          { mobileNumber: mobileNumber },
-          { email: email },
+          { mobileNumber: userName },
+          { email: userName },
         ],
       });
   
@@ -110,7 +110,7 @@ const registerUser = async (req, res) => {
          
          // Set the token in a cookie
         res.cookie('token', token, {
-            httpOnly: true, 
+            // httpOnly: true, 
             secure: process.env.NODE_ENV === 'production',
             maxAge: 3600000,
             sameSite: 'strict', 

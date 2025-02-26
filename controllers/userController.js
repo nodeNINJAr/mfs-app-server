@@ -11,6 +11,8 @@ const WithdrawRequest = require('../models/WithdrawRequest');
 const sendMoney = async (req, res) => {
   const { receiverMobileNumber, amount, pin } = req.body;
   const validInfo = req.user;
+    // sending Amount in poisa
+    const sendingAmount = Number(amount) * 100;
   // Find sender
   const sender = await User.findOne({_id : validInfo?.id});
   // Validate PIN
@@ -19,28 +21,29 @@ const sendMoney = async (req, res) => {
 
   // Validate receiver
   const receiver = await User.findOne({ mobileNumber: receiverMobileNumber });
+  // 
   if (!receiver) return res.status(404).json({ message: 'Receiver not found' });
 
   // Validate amount
-  if (amount < 50) return res.status(400).json({ message: 'Minimum amount is 50 Taka' });
+  if (sendingAmount < 500) return res.status(400).json({ message: 'Minimum amount is 50 Taka' });
 
   // Calculate fee
-  const fee = amount > 100 ? 5 : 0;
-  const totalAmount = amount + fee;
-
+  const fee = sendingAmount > 1000 ? 500 : 0;
+  const totalAmount = sendingAmount + fee;
+  
   // Check sender balance
   if (sender.balance < totalAmount) return res.status(400).json({ message: 'Insufficient balance' });
 
   // ** Update balances
   sender.balance -= totalAmount;
-  receiver.balance += amount;
+  receiver.balance += sendingAmount;
 
   // Create transaction
   const transaction = new Transaction({
     transactionId: generateTransactionId(),
     senderId: sender._id,
     receiverId: receiver._id,
-    amount,
+    amount:sendingAmount,
     fee,
     type: 'sendMoney',
   });
@@ -51,16 +54,19 @@ const sendMoney = async (req, res) => {
 
 // ** CashOut
 const cashOut = async (req, res) => {
-  const { userMobileNumber, agentMobileNumber, amount, pin } = req.body;
-
+  const { agentMobileNumber, amount, pin } = req.body;
+  const id = req.user.id;
+  // sending Amount in poisa
+  const sendingAmount = Number(amount) * 100;
+  // 
   try {
     // ** Validate input data
-    if (!userMobileNumber || !agentMobileNumber || !amount || !pin) {
+    if (!agentMobileNumber || !amount || !pin) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
     // ** Find the user and agent
-    const user = await User.findOne({ mobileNumber: userMobileNumber });
+    const user = await User.findOne({ _id: id });
     const agent = await User.findOne({ mobileNumber: agentMobileNumber,accountType:'agent' });
     // **
     if (!user || !agent) {
@@ -74,13 +80,13 @@ const cashOut = async (req, res) => {
     }
 
     // Validate the amount
-    if (amount < 50) {
+    if (sendingAmount < 5000) {
       return res.status(400).json({ message: 'Minimum amount is 50 Taka' });
     }
 
     // Calculate the cash-out fee (1.5% of the amount)
-    const fee = (amount * 1.5) / 100;
-    const totalAmount = amount + fee;
+    const fee = (sendingAmount * 150) / 10000;
+    const totalAmount = sendingAmount + fee;
 
     // Check the user's balance
     if (user.balance < totalAmount) {
@@ -92,8 +98,11 @@ const cashOut = async (req, res) => {
     await user.save();
 
     // Add the amount to the agent's balance
-    agent.balance += amount;
+    agent.balance += sendingAmount;
+    // agent income
+    agent.income += sendingAmount/10000;
     await agent.save();
+    
 
     // Generate a unique transaction ID
     const transactionId = generateTransactionId();
@@ -103,7 +112,7 @@ const cashOut = async (req, res) => {
       transactionId,
       senderId: user._id,
       receiverId: agent._id,
-      amount,
+      amount:sendingAmount,
       fee,
       type: 'cashOut',
     });
@@ -145,14 +154,13 @@ const getTransactions = async (req, res) => {
       .sort({ createdAt: -1 }) 
       .limit(parseInt(limit)) 
       .skip(parseInt(skip)) // 
-      .populate('senderId', 'name mobileNumber') 
-      .populate('receiverId', 'name mobileNumber'); 
+  
 
     // Formating
     const formattedTransactions = transactions.map((transaction) => ({
       transactionId: transaction.transactionId,
       type: transaction.type,
-      amount: transaction.amount,
+      amount: transaction.amount/100,
       fee: transaction.fee,
       sender: {
         name: transaction.senderId.name,
@@ -190,7 +198,7 @@ const getBalance = async (req, res) => {
     // Return the balance
     res.status(200).json({
       message: 'Balance retrieved successfully',
-      balance: user.balance,
+      balance: user.balance/100,
     });
   } catch (err) {
     console.error('Error retrieving balance:', err);
@@ -202,7 +210,7 @@ const getBalance = async (req, res) => {
 const cashIn = async (req, res) => {
   const { userMobileNumber, amount, pin } = req.body;
   const verified = req.user;
-  
+  const cashInAmount = Number(amount) * 100;
   // 
   try {
     // Validate input data
@@ -214,7 +222,7 @@ const cashIn = async (req, res) => {
     const user = await User.findOne({ mobileNumber: userMobileNumber });
     const agent = await User.findOne({ _id: verified?.id , accountType:verified?.accountType});
 
-    if (!user || !agent) {
+    if (!user || !agent || !agent?.isApproved) {
       return res.status(404).json({ message: 'User or agent not found' });
     }
 
@@ -225,21 +233,21 @@ const cashIn = async (req, res) => {
     }
 
     // Validate the amount
-    if (amount < 50) {
+    if (cashInAmount < 5000) {
       return res.status(400).json({ message: 'Minimum amount is 50 Taka' });
     }
 
     // Check the agent's balance
-    if (agent.balance < amount) {
+    if (agent.balance < cashInAmount) {
       return res.status(400).json({ message: 'Agent has insufficient balance' });
     }
 
     // Deduct the amount from the agent's balance
-    agent.balance -= amount;
+    agent.balance -= cashInAmount;
     await agent.save();
 
     // Add the amount to the user's balance
-    user.balance += amount;
+    user.balance += cashInAmount;
     await user.save();
 
     // Create a new transaction
@@ -247,7 +255,7 @@ const cashIn = async (req, res) => {
       transactionId:generateTransactionId(),
       senderId: agent._id,
       receiverId: user._id,
-      amount,
+      amount:cashInAmount,
       fee: 0, 
       type: 'cashIn',
     });

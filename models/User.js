@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema({
   isBlocked: { type: Boolean, default: false },
   isApproved: { type: String, default: 'pending' }, // For agents
   income: { type: Number, default: 0 }, // For agents
-  transactions: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }],
 }, { timestamps: true });
 
 
